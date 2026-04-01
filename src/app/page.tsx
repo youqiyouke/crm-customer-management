@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Search, Users, UserCheck, UserX, Clock, CheckCircle, DollarSign, Settings, LogOut, User } from 'lucide-react';
@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Customer, CustomerFilters } from '@/types/customer';
+import { Customer, CustomerFilters, CustomerSortField, SortOrder } from '@/types/customer';
 import { getCustomers, getStats, deleteCustomer } from '@/lib/customer-store';
 import { getCurrentAdmin, logoutAdmin } from '@/lib/admin-store';
 import { formatCurrency, formatDate } from '@/data/customers';
@@ -49,20 +49,102 @@ export default function HomePage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [stats, setStats] = useState<{
+    total: number;
+    byStatus: Record<string, number>;
+    byOwner: Record<string, { name: string; count: number }>;
+    totalLoanAmount: number;
+    totalServiceFee: number;
+  }>({
+    total: 0,
+    byStatus: {},
+    byOwner: {},
+    totalLoanAmount: 0,
+    totalServiceFee: 0,
+  });
+  const [currentAdmin, setCurrentAdmin] = useState<ReturnType<typeof getCurrentAdmin>>(null);
 
-  const currentAdmin = useMemo(() => getCurrentAdmin(), [mounted]);
-  const customers = useMemo(() => getCustomers(filters, currentAdmin), [filters, refreshKey, currentAdmin]);
-  const stats = useMemo(() => getStats(currentAdmin), [refreshKey, currentAdmin]);
+  // 加载数据
+  const loadData = async () => {
+    const admin = getCurrentAdmin();
+    if (!admin) return;
+
+    setLoading(true);
+    try {
+      const [customersData, statsData] = await Promise.all([
+        getCustomers(),
+        getStats(),
+      ]);
+      
+      // 应用筛选
+      let filtered = [...customersData];
+      
+      if (admin.role !== 'super_admin') {
+        filtered = filtered.filter(c => c.ownerId === admin.id);
+      }
+      
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        filtered = filtered.filter(c =>
+          c.name.toLowerCase().includes(search) ||
+          c.phone.includes(search)
+        );
+      }
+      
+      if (filters.status && filters.status !== 'all') {
+        filtered = filtered.filter(c => c.status === filters.status);
+      }
+      
+      // 排序
+      if (filters.sortField) {
+        filtered.sort((a, b) => {
+          const field = filters.sortField as keyof Customer;
+          let aVal = a[field];
+          let bVal = b[field];
+          
+          if (typeof aVal === 'string' && typeof bVal === 'string') {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+          }
+          
+          if (aVal! < bVal!) return filters.sortOrder === 'asc' ? -1 : 1;
+          if (aVal! > bVal!) return filters.sortOrder === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      
+      setCustomers(filtered);
+      setStats(statsData);
+    } catch (error) {
+      console.error('加载数据失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted && !currentAdmin) {
-      router.push('/login');
+    if (mounted) {
+      const admin = getCurrentAdmin();
+      setCurrentAdmin(admin);
+      if (!admin) {
+        router.push('/login');
+      } else {
+        loadData();
+      }
     }
-  }, [mounted, currentAdmin, router]);
+  }, [mounted, refreshKey, router]);
+
+  useEffect(() => {
+    if (currentAdmin) {
+      loadData();
+    }
+  }, [filters, currentAdmin]);
 
   if (!mounted || !currentAdmin) {
     return null;
@@ -78,9 +160,9 @@ export default function HomePage() {
     setDialogOpen(true);
   };
 
-  const handleDeleteCustomer = (id: string) => {
+  const handleDeleteCustomer = async (id: string) => {
     if (confirm('确定要删除这个客户吗？')) {
-      deleteCustomer(id, currentAdmin);
+      await deleteCustomer(id);
       setRefreshKey((k) => k + 1);
     }
   };
@@ -112,6 +194,13 @@ export default function HomePage() {
         {labels[status]}
       </Badge>
     );
+  };
+
+  const statusCount = {
+    need: stats.byStatus.need || 0,
+    following: stats.byStatus.following || 0,
+    not_need: stats.byStatus.not_need || 0,
+    completed: stats.byStatus.completed || 0,
   };
 
   return (
@@ -182,7 +271,7 @@ export default function HomePage() {
               <UserCheck className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.need}</div>
+              <div className="text-2xl font-bold text-blue-600">{statusCount.need}</div>
             </CardContent>
           </Card>
           <Card>
@@ -191,7 +280,7 @@ export default function HomePage() {
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.following}</div>
+              <div className="text-2xl font-bold text-yellow-600">{statusCount.following}</div>
             </CardContent>
           </Card>
           <Card>
@@ -200,7 +289,7 @@ export default function HomePage() {
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+              <div className="text-2xl font-bold text-green-600">{statusCount.completed}</div>
             </CardContent>
           </Card>
           <Card>
@@ -209,35 +298,28 @@ export default function HomePage() {
               <UserX className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{stats.notNeed}</div>
+              <div className="text-2xl font-bold text-gray-600">{statusCount.not_need}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="col-span-2">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">总放款金额</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{formatCurrency(stats.totalLoanAmount)}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">总服务费</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">{formatCurrency(stats.totalServiceFee)}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(stats.totalLoanAmount)}
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters */}
-        <div className="mt-6 flex flex-col gap-4 md:flex-row">
+        <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="搜索客户姓名或公司..."
+              placeholder="搜索客户姓名或手机号..."
               className="pl-10"
               value={filters.search || ''}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
@@ -248,7 +330,7 @@ export default function HomePage() {
             onValueChange={(value) => setFilters({ ...filters, status: value as CustomerFilters['status'] })}
           >
             <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="状态" />
+              <SelectValue placeholder="状态筛选" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部状态</SelectItem>
@@ -262,96 +344,77 @@ export default function HomePage() {
             value={`${filters.sortField}-${filters.sortOrder}`}
             onValueChange={(value) => {
               const [field, order] = value.split('-');
-              setFilters({ ...filters, sortField: field as CustomerFilters['sortField'], sortOrder: order as CustomerFilters['sortOrder'] });
+              setFilters({ ...filters, sortField: field as CustomerSortField, sortOrder: order as SortOrder });
             }}
           >
             <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="排序" />
+              <SelectValue placeholder="排序方式" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="createdAt-desc">创建时间 (最新)</SelectItem>
-              <SelectItem value="createdAt-asc">创建时间 (最早)</SelectItem>
-              <SelectItem value="name-asc">姓名 (A-Z)</SelectItem>
-              <SelectItem value="name-desc">姓名 (Z-A)</SelectItem>
-              <SelectItem value="loanAmount-desc">放款金额 (高-低)</SelectItem>
-              <SelectItem value="loanAmount-asc">放款金额 (低-高)</SelectItem>
-              <SelectItem value="visitTime-desc">访问时间 (最新)</SelectItem>
-              <SelectItem value="visitTime-asc">访问时间 (最早)</SelectItem>
+              <SelectItem value="createdAt-desc">创建时间（最新）</SelectItem>
+              <SelectItem value="createdAt-asc">创建时间（最早）</SelectItem>
+              <SelectItem value="updatedAt-desc">更新时间（最新）</SelectItem>
+              <SelectItem value="updatedAt-asc">更新时间（最早）</SelectItem>
+              <SelectItem value="loanAmount-desc">放款金额（高到低）</SelectItem>
+              <SelectItem value="loanAmount-asc">放款金额（低到高）</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Customer Table */}
         <div className="mt-6 rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>客户姓名</TableHead>
-                <TableHead>联系方式</TableHead>
-                <TableHead>公司</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>放款金额</TableHead>
-                <TableHead>服务费</TableHead>
-                <TableHead>访问时间</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.length === 0 ? (
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground">加载中...</div>
+          ) : customers.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              暂无客户数据，点击"添加客户"开始创建
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <Users className="mb-2 h-8 w-8" />
-                      <p>暂无客户数据</p>
-                    </div>
-                  </TableCell>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>手机号</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>放款金额</TableHead>
+                  <TableHead>服务费</TableHead>
+                  <TableHead>负责人</TableHead>
+                  <TableHead>更新时间</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
                 </TableRow>
-              ) : (
-                customers.map((customer) => (
-                  <TableRow key={customer.id} className="group">
-                    <TableCell>
-                      <Link href={`/customers/${customer.id}`} className="hover:underline font-medium">
-                        {customer.name}
-                      </Link>
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {customers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="font-medium">{customer.name}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.company}</TableCell>
                     <TableCell>{getStatusBadge(customer.status)}</TableCell>
                     <TableCell>{formatCurrency(customer.loanAmount)}</TableCell>
                     <TableCell>{formatCurrency(customer.serviceFee)}</TableCell>
-                    <TableCell>{formatDate(customer.visitTime)}</TableCell>
+                    <TableCell>{customer.ownerName}</TableCell>
+                    <TableCell>{formatDate(customer.updatedAt)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/customers/${customer.id}`}>查看</Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditCustomer(customer)}
-                        >
-                          编辑
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteCustomer(customer.id)}
-                        >
-                          删除
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCustomer(customer)}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteCustomer(customer.id)}
+                      >
+                        删除
+                      </Button>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Results count */}
-        <div className="mt-4 text-sm text-muted-foreground">
-          显示 {customers.length} 个客户
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </main>
 
@@ -361,7 +424,6 @@ export default function HomePage() {
         onOpenChange={setDialogOpen}
         customer={editingCustomer}
         onSuccess={handleDialogSuccess}
-        currentAdmin={currentAdmin}
       />
     </div>
   );

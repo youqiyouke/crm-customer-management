@@ -1,11 +1,10 @@
 export interface Admin {
   id: string;
   username: string;
-  password: string; // 实际项目中应该加密存储
   name: string;
   role: 'admin' | 'super_admin';
   createdAt: string;
-  lastLogin: string | null;
+  lastLogin?: string;
 }
 
 export interface AdminLoginData {

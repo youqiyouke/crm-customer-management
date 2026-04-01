@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Customer, CustomerFormData } from '@/types/customer';
-import { Admin } from '@/types/admin';
 import { createCustomer, updateCustomer } from '@/lib/customer-store';
+import { getCurrentAdmin } from '@/lib/admin-store';
 import {
   Dialog,
   DialogContent,
@@ -29,10 +29,9 @@ interface CustomerDialogProps {
   onOpenChange: (open: boolean) => void;
   customer?: Customer | null;
   onSuccess: () => void;
-  currentAdmin: Admin | null;
 }
 
-export function CustomerDialog({ open, onOpenChange, customer, onSuccess, currentAdmin }: CustomerDialogProps) {
+export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: CustomerDialogProps) {
   const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
     phone: '',
@@ -40,6 +39,8 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess, curren
     status: 'need',
     tags: [],
     notes: '',
+    loanAmount: 0,
+    serviceFee: 0,
   });
   const [tagInput, setTagInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,8 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess, curren
         status: customer.status,
         tags: customer.tags,
         notes: customer.notes,
+        loanAmount: customer.loanAmount || 0,
+        serviceFee: customer.serviceFee || 0,
       });
     } else {
       setFormData({
@@ -62,6 +65,8 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess, curren
         status: 'need',
         tags: [],
         notes: '',
+        loanAmount: 0,
+        serviceFee: 0,
       });
     }
     setTagInput('');
@@ -69,14 +74,30 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess, curren
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const currentAdmin = getCurrentAdmin();
     if (!currentAdmin) return;
+    
     setLoading(true);
 
     try {
       if (customer) {
-        updateCustomer(customer.id, formData, currentAdmin);
+        await updateCustomer(customer.id, {
+          ...formData,
+          updatedAt: new Date().toISOString(),
+        });
       } else {
-        createCustomer(formData, currentAdmin.id);
+        await createCustomer({
+          name: formData.name,
+          phone: formData.phone,
+          company: formData.company,
+          status: formData.status,
+          tags: formData.tags,
+          notes: formData.notes,
+          loanAmount: formData.loanAmount,
+          serviceFee: formData.serviceFee,
+          ownerId: currentAdmin.id,
+          ownerName: currentAdmin.name,
+        });
       }
       onSuccess();
       onOpenChange(false);
@@ -162,6 +183,32 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess, curren
                     <SelectItem value="not_need">不需要</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* 金额信息 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="loanAmount">放款金额</Label>
+                <Input
+                  id="loanAmount"
+                  type="number"
+                  value={formData.loanAmount || ''}
+                  onChange={(e) => setFormData({ ...formData, loanAmount: Number(e.target.value) || 0 })}
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="serviceFee">服务费</Label>
+                <Input
+                  id="serviceFee"
+                  type="number"
+                  value={formData.serviceFee || ''}
+                  onChange={(e) => setFormData({ ...formData, serviceFee: Number(e.target.value) || 0 })}
+                  placeholder="0"
+                  min="0"
+                />
               </div>
             </div>
 

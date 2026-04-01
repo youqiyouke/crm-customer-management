@@ -32,11 +32,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const admin = loginAdmin(formData);
-      if (admin) {
+      const result = await loginAdmin(formData.username, formData.password);
+      if ('admin' in result) {
         router.push('/');
       } else {
-        setError('用户名或密码错误');
+        setError(result.error || '用户名或密码错误');
       }
     } catch {
       setError('登录失败，请重试');

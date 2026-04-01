@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Users, Shield, ArrowLeft, Edit, Trash2, KeyRound } from 'lucide-react';
+import { Plus, Users, Shield, ArrowLeft, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,29 +32,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Admin, AdminFormData } from '@/types/admin';
-import { getAdmins, getCurrentAdmin, createAdmin, updateAdmin, deleteAdmin, resetPassword } from '@/lib/admin-store';
-import { formatDateTime } from '@/data/admins';
+import { Admin } from '@/types/admin';
+import { getAdmins, createAdmin, updateAdmin, deleteAdmin } from '@/lib/customer-store';
+import { logoutAdmin, getCurrentAdmin } from '@/lib/admin-store';
+
+interface AdminWithTimestamp {
+  id: string;
+  username: string;
+  name: string;
+  role: 'super_admin' | 'admin';
+  createdAt: string;
+  lastLogin?: string;
+}
 
 export default function AdminsPage() {
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
+  const [editingAdmin, setEditingAdmin] = useState<AdminWithTimestamp | null>(null);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
-  const [resettingAdmin, setResettingAdmin] = useState<Admin | null>(null);
+  const [resettingAdmin, setResettingAdmin] = useState<AdminWithTimestamp | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [admins, setAdmins] = useState<AdminWithTimestamp[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentAdmin, setCurrentAdmin] = useState<ReturnType<typeof getCurrentAdmin>>(null);
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    name: '',
+    role: 'admin' as 'admin' | 'super_admin',
+  });
 
-  const admins = useMemo(() => getAdmins(), [refreshKey]);
-  const currentAdmin = getCurrentAdmin();
+  const loadAdmins = async () => {
+    setLoading(true);
+    try {
+      const data = await getAdmins();
+      setAdmins(data);
+    } catch (error) {
+      console.error('加载管理员列表失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!currentAdmin) {
+    const admin = getCurrentAdmin();
+    setCurrentAdmin(admin);
+    if (!admin) {
       router.push('/login');
-    } else if (currentAdmin.role !== 'super_admin') {
+    } else if (admin.role !== 'super_admin') {
       router.push('/');
+    } else {
+      loadAdmins();
     }
-  }, [currentAdmin, router]);
+  }, [router, refreshKey]);
 
   if (!currentAdmin || currentAdmin.role !== 'super_admin') {
     return null;
@@ -62,40 +93,99 @@ export default function AdminsPage() {
 
   const handleAddAdmin = () => {
     setEditingAdmin(null);
+    setFormData({ username: '', password: '', name: '', role: 'admin' });
     setDialogOpen(true);
   };
 
-  const handleEditAdmin = (admin: Admin) => {
+  const handleEditAdmin = (admin: AdminWithTimestamp) => {
     setEditingAdmin(admin);
+    setFormData({
+      username: admin.username,
+      password: '',
+      name: admin.name,
+      role: admin.role,
+    });
     setDialogOpen(true);
   };
 
-  const handleDeleteAdmin = (id: string) => {
+  const handleSubmit = async () => {
+    if (!formData.username || !formData.name) return;
+    if (!editingAdmin && !formData.password) return;
+
+    try {
+      if (editingAdmin) {
+        const updateData: {
+          username?: string;
+          password?: string;
+          name?: string;
+          role?: string;
+        } = {
+          username: formData.username,
+          name: formData.name,
+          role: formData.role,
+        };
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+        await updateAdmin(editingAdmin.id, updateData);
+      } else {
+        await createAdmin({
+          username: formData.username,
+          password: formData.password,
+          name: formData.name,
+          role: formData.role,
+        });
+      }
+      setDialogOpen(false);
+      setRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error('保存管理员失败:', error);
+      alert('保存失败');
+    }
+  };
+
+  const handleDeleteAdmin = async (id: string) => {
     if (confirm('确定要删除这个管理员吗？')) {
-      if (deleteAdmin(id)) {
+      const result = await deleteAdmin(id);
+      if (result.success) {
         setRefreshKey((k) => k + 1);
       } else {
-        alert('无法删除超级管理员');
+        alert(result.error || '删除失败');
       }
     }
   };
 
-  const handleResetPassword = (admin: Admin) => {
+  const handleResetPassword = (admin: AdminWithTimestamp) => {
     setResettingAdmin(admin);
     setNewPassword('');
     setResetPasswordOpen(true);
   };
 
-  const confirmResetPassword = () => {
+  const confirmResetPassword = async () => {
     if (resettingAdmin && newPassword.trim()) {
-      resetPassword(resettingAdmin.id, newPassword.trim());
-      setResetPasswordOpen(false);
-      setResettingAdmin(null);
-      setNewPassword('');
+      const result = await updateAdmin(resettingAdmin.id, { password: newPassword.trim() });
+      if (result.success) {
+        setResetPasswordOpen(false);
+        setResettingAdmin(null);
+        setNewPassword('');
+        alert('密码重置成功');
+      } else {
+        alert(result.error || '重置失败');
+      }
     }
   };
 
-  const getRoleBadge = (role: Admin['role']) => {
+  const handleLogout = () => {
+    logoutAdmin();
+    router.push('/login');
+  };
+
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString('zh-CN');
+  };
+
+  const getRoleBadge = (role: AdminWithTimestamp['role']) => {
     const styles = {
       super_admin: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       admin: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -129,10 +219,15 @@ export default function AdminsPage() {
                 <p className="text-sm text-muted-foreground">管理系统管理员账号</p>
               </div>
             </div>
-            <Button onClick={handleAddAdmin}>
-              <Plus className="mr-2 h-4 w-4" />
-              添加管理员
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button onClick={handleAddAdmin}>
+                <Plus className="mr-2 h-4 w-4" />
+                添加管理员
+              </Button>
+              <Button variant="outline" onClick={handleLogout}>
+                退出登录
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -164,70 +259,136 @@ export default function AdminsPage() {
 
         {/* Admin Table */}
         <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>用户名</TableHead>
-                <TableHead>姓名</TableHead>
-                <TableHead>角色</TableHead>
-                <TableHead>创建时间</TableHead>
-                <TableHead>最后登录</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {admins.map((admin) => (
-                <TableRow key={admin.id} className="group">
-                  <TableCell className="font-medium">{admin.username}</TableCell>
-                  <TableCell>{admin.name}</TableCell>
-                  <TableCell>{getRoleBadge(admin.role)}</TableCell>
-                  <TableCell>{formatDateTime(admin.createdAt)}</TableCell>
-                  <TableCell>{formatDateTime(admin.lastLogin)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleResetPassword(admin)}
-                      >
-                        <KeyRound className="mr-1 h-3 w-3" />
-                        重置密码
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditAdmin(admin)}
-                      >
-                        <Edit className="mr-1 h-3 w-3" />
-                        编辑
-                      </Button>
-                      {admin.role !== 'super_admin' && (
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground">加载中...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>用户名</TableHead>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead>创建时间</TableHead>
+                  <TableHead>最后登录</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {admins.map((admin) => (
+                  <TableRow key={admin.id} className="group">
+                    <TableCell className="font-medium">{admin.username}</TableCell>
+                    <TableCell>{admin.name}</TableCell>
+                    <TableCell>{getRoleBadge(admin.role)}</TableCell>
+                    <TableCell>{formatDateTime(admin.createdAt)}</TableCell>
+                    <TableCell>{formatDateTime(admin.lastLogin)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleDeleteAdmin(admin.id)}
+                          onClick={() => handleResetPassword(admin)}
                         >
-                          <Trash2 className="mr-1 h-3 w-3" />
-                          删除
+                          <KeyRound className="mr-1 h-3 w-3" />
+                          重置密码
                         </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditAdmin(admin)}
+                        >
+                          编辑
+                        </Button>
+                        {admin.role !== 'super_admin' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteAdmin(admin.id)}
+                          >
+                            删除
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </main>
 
-      {/* Admin Dialog */}
-      <AdminDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        admin={editingAdmin}
-        onSuccess={() => setRefreshKey((k) => k + 1)}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingAdmin ? '编辑管理员' : '添加管理员'}</DialogTitle>
+            <DialogDescription>
+              {editingAdmin ? '修改管理员信息' : '创建新的管理员账号'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">用户名</Label>
+                <Input
+                  id="username"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="用户名"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">姓名</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="姓名"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  密码 {editingAdmin && '(留空保持不变)'}
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="密码"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">角色</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({ ...formData, role: value as 'admin' | 'super_admin' })}
+                  disabled={editingAdmin?.role === 'super_admin'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择角色" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">管理员</SelectItem>
+                    <SelectItem value="super_admin">超级管理员</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSubmit}>
+              {editingAdmin ? '更新' : '创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reset Password Dialog */}
       <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
@@ -235,7 +396,7 @@ export default function AdminsPage() {
           <DialogHeader>
             <DialogTitle>重置密码</DialogTitle>
             <DialogDescription>
-              为管理员 {resettingAdmin?.name} 设置新密码
+              为 {resettingAdmin?.name} 设置新密码
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -246,180 +407,17 @@ export default function AdminsPage() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="请输入新密码"
+              className="mt-2"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>
               取消
             </Button>
-            <Button onClick={confirmResetPassword} disabled={!newPassword.trim()}>
-              确认重置
-            </Button>
+            <Button onClick={confirmResetPassword}>确认重置</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-// Admin Dialog Component
-function AdminDialog({
-  open,
-  onOpenChange,
-  admin,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  admin?: Admin | null;
-  onSuccess: () => void;
-}) {
-  const [formData, setFormData] = useState<AdminFormData>({
-    username: '',
-    password: '',
-    name: '',
-    role: 'admin',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (admin) {
-      setFormData({
-        username: admin.username,
-        password: '',
-        name: admin.name,
-        role: admin.role,
-      });
-    } else {
-      setFormData({
-        username: '',
-        password: '',
-        name: '',
-        role: 'admin',
-      });
-    }
-    setError('');
-  }, [admin, open]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      if (admin) {
-        // 编辑模式
-        const updateData: Partial<AdminFormData> = {
-          username: formData.username,
-          name: formData.name,
-        };
-        if (formData.password) {
-          updateData.password = formData.password;
-        }
-        const result = updateAdmin(admin.id, updateData);
-        if (result) {
-          onSuccess();
-          onOpenChange(false);
-        } else {
-          setError('用户名已存在');
-        }
-      } else {
-        // 新建模式
-        if (!formData.password) {
-          setError('请输入密码');
-          setLoading(false);
-          return;
-        }
-        const result = createAdmin(formData);
-        if (result) {
-          onSuccess();
-          onOpenChange(false);
-        } else {
-          setError('用户名已存在');
-        }
-      }
-    } catch {
-      setError('操作失败，请重试');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{admin ? '编辑管理员' : '添加管理员'}</DialogTitle>
-            <DialogDescription>
-              {admin ? '修改管理员信息' : '创建新的管理员账号'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">用户名 *</Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="登录用户名"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">姓名 *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="管理员姓名"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">
-                密码 {admin ? '(留空保持不变)' : '*'}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder={admin ? '留空保持不变' : '请输入密码'}
-                required={!admin}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">角色</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as AdminFormData['role'] })}
-                disabled={admin?.role === 'super_admin'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择角色" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">管理员</SelectItem>
-                  <SelectItem value="super_admin">超级管理员</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {error && <div className="text-sm text-red-500">{error}</div>}
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              取消
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? '保存中...' : admin ? '更新' : '创建'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }

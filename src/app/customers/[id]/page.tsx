@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,12 +18,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { getCustomerById, deleteCustomer } from '@/lib/customer-store';
+import { deleteCustomer } from '@/lib/customer-store';
 import { getCurrentAdmin } from '@/lib/admin-store';
 import { formatCurrency, formatDateTime } from '@/data/customers';
 import { Customer } from '@/types/customer';
 import { CustomerDialog } from '@/components/customer-dialog';
-import { notFound } from 'next/navigation';
+import { getAuthHeaders } from '@/lib/admin-store';
 
 export default function CustomerDetailPage() {
   const params = useParams();
@@ -31,33 +31,80 @@ export default function CustomerDetailPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentAdmin, setCurrentAdmin] = useState<ReturnType<typeof getCurrentAdmin>>(null);
 
-  const currentAdmin = useMemo(() => getCurrentAdmin(), [mounted]);
+  const customerId = params.id as string;
+
+  // 加载客户数据
+  const loadCustomer = async () => {
+    if (!customerId) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/customers/${customerId}`, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCustomer(data.customer);
+      } else {
+        setCustomer(null);
+      }
+    } catch (error) {
+      console.error('加载客户数据失败:', error);
+      setCustomer(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted && !currentAdmin) {
-      router.push('/login');
+    if (mounted) {
+      const admin = getCurrentAdmin();
+      setCurrentAdmin(admin);
+      if (!admin) {
+        router.push('/login');
+      } else {
+        loadCustomer();
+      }
     }
-  }, [mounted, currentAdmin, router]);
+  }, [mounted, customerId, refreshKey, router]);
 
   if (!mounted || !currentAdmin) {
     return null;
   }
 
-  const customerId = params.id as string;
-  const customer = getCustomerById(customerId, currentAdmin);
-
-  if (!customer) {
-    notFound();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">加载中...</p>
+      </div>
+    );
   }
 
-  const handleDelete = () => {
+  if (!customer) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">客户不存在或无权限访问</p>
+          <Button asChild>
+            <Link href="/">返回首页</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleDelete = async () => {
     if (confirm('确定要删除这个客户吗？此操作不可撤销。')) {
-      deleteCustomer(customerId, currentAdmin);
+      await deleteCustomer(customerId);
       router.push('/');
     }
   };
@@ -86,8 +133,6 @@ export default function CustomerDetailPage() {
     );
   };
 
-  const updatedCustomer = getCustomerById(customerId, currentAdmin) || customer;
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -98,20 +143,23 @@ export default function CustomerDetailPage() {
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  返回列表
+                  返回
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">{updatedCustomer.name}</h1>
-                <p className="text-sm text-muted-foreground">{updatedCustomer.company}</p>
+                <h1 className="text-2xl font-bold">{customer.name}</h1>
+                <p className="text-sm text-muted-foreground">客户详情</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => setDialogOpen(true)}>
                 <Edit className="mr-2 h-4 w-4" />
                 编辑
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 删除
               </Button>
@@ -121,154 +169,144 @@ export default function CustomerDetailPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* 左侧：基本信息 */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>基本信息</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Phone className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">电话</p>
-                      <p className="font-medium">{updatedCustomer.phone || '未填写'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Building className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">公司</p>
-                      <p className="font-medium">{updatedCustomer.company || '未填写'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">创建时间</p>
-                      <p className="font-medium">{formatDateTime(updatedCustomer.createdAt)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* 基本信息 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>基本信息</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">状态</p>
-                  {getStatusBadge(updatedCustomer.status)}
+                  <p className="text-sm text-muted-foreground">电话</p>
+                  <p className="font-medium">{customer.phone || '-'}</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">公司</p>
+                  <p className="font-medium">{customer.company || '-'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">状态</p>
+                  {getStatusBadge(customer.status)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                {updatedCustomer.tags.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Tag className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">标签</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {updatedCustomer.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+          {/* 财务信息 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>财务信息</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">放款金额</p>
+                  <p className="font-medium text-green-600">
+                    {formatCurrency(customer.loanAmount)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">服务费</p>
+                  <p className="font-medium">{formatCurrency(customer.serviceFee)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                {updatedCustomer.notes && (
-                  <>
-                    <Separator />
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">备注</p>
-                      </div>
-                      <p className="text-sm whitespace-pre-wrap">{updatedCustomer.notes}</p>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          {/* 时间信息 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>时间信息</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">创建时间</p>
+                  <p className="font-medium">{formatDateTime(customer.createdAt)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">更新时间</p>
+                  <p className="font-medium">{formatDateTime(customer.updatedAt)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* 右侧：统计信息 */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>客户统计</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm">放款金额</span>
-                  </div>
-                  <span className="text-xl font-bold text-primary">
-                    {formatCurrency(updatedCustomer.loanAmount)}
-                  </span>
+          {/* 负责人信息 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>负责人信息</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">负责人</p>
+                  <p className="font-medium">{customer.ownerName || '-'}</p>
                 </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm">服务费</span>
-                  </div>
-                  <span className="text-xl font-bold">{formatCurrency(updatedCustomer.serviceFee)}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm">访问时间</span>
-                  </div>
-                  <span className="text-sm">{formatDateTime(updatedCustomer.visitTime)}</span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">最后更新</span>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDateTime(updatedCustomer.updatedAt)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>快捷操作</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Phone className="mr-2 h-4 w-4" />
-                  拨打电话
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <FileText className="mr-2 h-4 w-4" />
-                  添加备注
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* 标签 */}
+        {customer.tags.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                标签
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {customer.tags.map((tag: string) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 备注 */}
+        {customer.notes && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                备注
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap">{customer.notes}</p>
+            </CardContent>
+          </Card>
+        )}
       </main>
 
-      {/* Edit Dialog */}
+      {/* Customer Dialog */}
       <CustomerDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        customer={updatedCustomer}
+        customer={customer}
         onSuccess={handleEditSuccess}
-        currentAdmin={currentAdmin}
       />
     </div>
   );
