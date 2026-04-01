@@ -98,7 +98,7 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">总客户数</CardTitle>
@@ -128,11 +128,20 @@ export default function HomePage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">总收入</CardTitle>
+              <CardTitle className="text-sm font-medium">总放款金额</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(stats.totalLoanAmount)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">总服务费</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(stats.totalServiceFee)}</div>
             </CardContent>
           </Card>
         </div>
@@ -176,10 +185,10 @@ export default function HomePage() {
               <SelectItem value="createdAt-asc">创建时间 (最早)</SelectItem>
               <SelectItem value="name-asc">姓名 (A-Z)</SelectItem>
               <SelectItem value="name-desc">姓名 (Z-A)</SelectItem>
-              <SelectItem value="totalSpent-desc">消费金额 (高-低)</SelectItem>
-              <SelectItem value="totalSpent-asc">消费金额 (低-高)</SelectItem>
-              <SelectItem value="lastContact-desc">最近联系 (最新)</SelectItem>
-              <SelectItem value="lastContact-asc">最近联系 (最早)</SelectItem>
+              <SelectItem value="loanAmount-desc">放款金额 (高-低)</SelectItem>
+              <SelectItem value="loanAmount-asc">放款金额 (低-高)</SelectItem>
+              <SelectItem value="visitTime-desc">访问时间 (最新)</SelectItem>
+              <SelectItem value="visitTime-asc">访问时间 (最早)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -193,9 +202,9 @@ export default function HomePage() {
                 <TableHead>联系方式</TableHead>
                 <TableHead>公司</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead>消费金额</TableHead>
-                <TableHead>订单数</TableHead>
-                <TableHead>最近联系</TableHead>
+                <TableHead>放款金额</TableHead>
+                <TableHead>服务费</TableHead>
+                <TableHead>访问时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -220,9 +229,9 @@ export default function HomePage() {
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>{customer.company}</TableCell>
                     <TableCell>{getStatusBadge(customer.status)}</TableCell>
-                    <TableCell>{formatCurrency(customer.totalSpent)}</TableCell>
-                    <TableCell>{customer.ordersCount}</TableCell>
-                    <TableCell>{formatDate(customer.lastContact)}</TableCell>
+                    <TableCell>{formatCurrency(customer.loanAmount)}</TableCell>
+                    <TableCell>{formatCurrency(customer.serviceFee)}</TableCell>
+                    <TableCell>{formatDate(customer.visitTime)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100">
                         <Button variant="ghost" size="sm" asChild>

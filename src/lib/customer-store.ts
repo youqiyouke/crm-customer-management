@@ -32,10 +32,10 @@ export function getCustomers(filters?: Partial<CustomerFilters>): Customer[] {
         let comparison = 0;
         if (sortField === 'name') {
           comparison = a.name.localeCompare(b.name, 'zh-CN');
-        } else if (sortField === 'createdAt' || sortField === 'lastContact') {
+        } else if (sortField === 'createdAt' || sortField === 'visitTime') {
           comparison = new Date(a[sortField]).getTime() - new Date(b[sortField]).getTime();
-        } else if (sortField === 'totalSpent') {
-          comparison = a.totalSpent - b.totalSpent;
+        } else if (sortField === 'loanAmount') {
+          comparison = a.loanAmount - b.loanAmount;
         }
         return sortOrder === 'asc' ? comparison : -comparison;
       });
@@ -46,7 +46,14 @@ export function getCustomers(filters?: Partial<CustomerFilters>): Customer[] {
 }
 
 export function getCustomerById(id: string): Customer | undefined {
-  return customers.find((c) => c.id === id);
+  // 每次获取客户详情时，自动更新访问时间
+  const customer = customers.find((c) => c.id === id);
+  if (customer) {
+    const now = new Date().toISOString();
+    customer.visitTime = now;
+    customer.updatedAt = now;
+  }
+  return customer;
 }
 
 export function createCustomer(data: CustomerFormData): Customer {
@@ -56,9 +63,9 @@ export function createCustomer(data: CustomerFormData): Customer {
     id: generateId(),
     createdAt: now,
     updatedAt: now,
-    lastContact: now,
-    totalSpent: 0,
-    ordersCount: 0,
+    visitTime: now,
+    loanAmount: 0,
+    serviceFee: 0,
   };
   customers.push(newCustomer);
   return newCustomer;
@@ -73,6 +80,7 @@ export function updateCustomer(id: string, data: Partial<CustomerFormData>): Cus
     ...customers[index],
     ...data,
     updatedAt: now,
+    visitTime: now, // 更新访问时间
   };
   return customers[index];
 }
@@ -88,12 +96,14 @@ export function getStats() {
   const total = customers.length;
   const need = customers.filter((c) => c.status === 'need').length;
   const notNeed = customers.filter((c) => c.status === 'not_need').length;
-  const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+  const totalLoanAmount = customers.reduce((sum, c) => sum + c.loanAmount, 0);
+  const totalServiceFee = customers.reduce((sum, c) => sum + c.serviceFee, 0);
 
   return {
     total,
     need,
     notNeed,
-    totalRevenue,
+    totalLoanAmount,
+    totalServiceFee,
   };
 }

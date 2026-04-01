@@ -9,7 +9,6 @@ import {
   Building,
   Calendar,
   DollarSign,
-  ShoppingCart,
   Edit,
   Trash2,
   Tag,
@@ -190,27 +189,27 @@ export default function CustomerDetailPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm">累计消费</span>
+                    <span className="text-sm">放款金额</span>
                   </div>
                   <span className="text-xl font-bold text-primary">
-                    {formatCurrency(updatedCustomer.totalSpent)}
+                    {formatCurrency(updatedCustomer.loanAmount)}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm">订单数量</span>
+                    <DollarSign className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm">服务费</span>
                   </div>
-                  <span className="text-xl font-bold">{updatedCustomer.ordersCount}</span>
+                  <span className="text-xl font-bold">{formatCurrency(updatedCustomer.serviceFee)}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm">最近联系</span>
+                    <span className="text-sm">访问时间</span>
                   </div>
-                  <span className="text-sm">{formatDateTime(updatedCustomer.lastContact)}</span>
+                  <span className="text-sm">{formatDateTime(updatedCustomer.visitTime)}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">

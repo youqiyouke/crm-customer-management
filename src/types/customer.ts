@@ -8,9 +8,9 @@ export interface Customer {
   notes: string;
   createdAt: string;
   updatedAt: string;
-  lastContact: string;
-  totalSpent: number;
-  ordersCount: number;
+  visitTime: string; // 访问时间，自动更新
+  loanAmount: number; // 放款金额
+  serviceFee: number; // 服务费
 }
 
 export interface CustomerFormData {
@@ -22,7 +22,7 @@ export interface CustomerFormData {
   notes: string;
 }
 
-export type CustomerSortField = 'name' | 'createdAt' | 'lastContact' | 'totalSpent';
+export type CustomerSortField = 'name' | 'createdAt' | 'visitTime' | 'loanAmount';
 export type SortOrder = 'asc' | 'desc';
 
 export interface CustomerFilters {
