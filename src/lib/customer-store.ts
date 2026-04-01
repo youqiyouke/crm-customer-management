@@ -16,7 +16,6 @@ export function getCustomers(filters?: Partial<CustomerFilters>): Customer[] {
       result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(searchLower) ||
-          c.email.toLowerCase().includes(searchLower) ||
           c.company.toLowerCase().includes(searchLower)
       );
     }
@@ -24,11 +23,6 @@ export function getCustomers(filters?: Partial<CustomerFilters>): Customer[] {
     // 状态筛选
     if (filters.status && filters.status !== 'all') {
       result = result.filter((c) => c.status === filters.status);
-    }
-
-    // 来源筛选
-    if (filters.source && filters.source !== 'all') {
-      result = result.filter((c) => c.source === filters.source);
     }
 
     // 排序
@@ -92,16 +86,14 @@ export function deleteCustomer(id: string): boolean {
 
 export function getStats() {
   const total = customers.length;
-  const active = customers.filter((c) => c.status === 'active').length;
-  const pending = customers.filter((c) => c.status === 'pending').length;
-  const inactive = customers.filter((c) => c.status === 'inactive').length;
+  const need = customers.filter((c) => c.status === 'need').length;
+  const notNeed = customers.filter((c) => c.status === 'not_need').length;
   const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0);
 
   return {
     total,
-    active,
-    pending,
-    inactive,
+    need,
+    notNeed,
     totalRevenue,
   };
 }

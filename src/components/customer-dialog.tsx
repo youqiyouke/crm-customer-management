@@ -33,11 +33,9 @@ interface CustomerDialogProps {
 export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: CustomerDialogProps) {
   const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
-    email: '',
     phone: '',
     company: '',
-    status: 'pending',
-    source: 'other',
+    status: 'need',
     tags: [],
     notes: '',
   });
@@ -48,22 +46,18 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
     if (customer) {
       setFormData({
         name: customer.name,
-        email: customer.email,
         phone: customer.phone,
         company: customer.company,
         status: customer.status,
-        source: customer.source,
         tags: customer.tags,
         notes: customer.notes,
       });
     } else {
       setFormData({
         name: '',
-        email: '',
         phone: '',
         company: '',
-        status: 'pending',
-        source: 'other',
+        status: 'need',
         tags: [],
         notes: '',
       });
@@ -136,19 +130,8 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
               </div>
             </div>
 
-            {/* 联系方式 */}
+            {/* 联系方式和状态 */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">邮箱 *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="email@example.com"
-                  required
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">电话</Label>
                 <Input
@@ -158,10 +141,6 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
                   placeholder="138-0000-0000"
                 />
               </div>
-            </div>
-
-            {/* 状态和来源 */}
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">状态</Label>
                 <Select
@@ -174,29 +153,8 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
                     <SelectValue placeholder="选择状态" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">活跃</SelectItem>
-                    <SelectItem value="pending">待跟进</SelectItem>
-                    <SelectItem value="inactive">不活跃</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="source">来源</Label>
-                <Select
-                  value={formData.source}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, source: value as CustomerFormData['source'] })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择来源" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="website">网站</SelectItem>
-                    <SelectItem value="referral">推荐</SelectItem>
-                    <SelectItem value="social">社交</SelectItem>
-                    <SelectItem value="direct">直接</SelectItem>
-                    <SelectItem value="other">其他</SelectItem>
+                    <SelectItem value="need">需要</SelectItem>
+                    <SelectItem value="not_need">不需要</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

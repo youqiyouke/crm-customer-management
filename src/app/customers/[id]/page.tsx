@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Mail,
   Phone,
   Building,
   Calendar,
@@ -52,31 +51,18 @@ export default function CustomerDetailPage() {
 
   const getStatusBadge = (status: Customer['status']) => {
     const styles = {
-      active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      inactive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      need: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      not_need: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     };
     const labels = {
-      active: '活跃',
-      inactive: '不活跃',
-      pending: '待跟进',
+      need: '需要',
+      not_need: '不需要',
     };
     return (
       <Badge className={styles[status]} variant="secondary">
         {labels[status]}
       </Badge>
     );
-  };
-
-  const getSourceLabel = (source: Customer['source']) => {
-    const labels: Record<Customer['source'], string> = {
-      website: '网站',
-      referral: '推荐',
-      social: '社交',
-      direct: '直接',
-      other: '其他',
-    };
-    return labels[source];
   };
 
   const updatedCustomer = getCustomerById(customerId) || customer;
@@ -125,15 +111,6 @@ export default function CustomerDetailPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Mail className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">邮箱</p>
-                      <p className="font-medium">{updatedCustomer.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <Phone className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -163,15 +140,9 @@ export default function CustomerDetailPage() {
 
                 <Separator />
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">状态</p>
-                    {getStatusBadge(updatedCustomer.status)}
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">来源</p>
-                    <p className="font-medium">{getSourceLabel(updatedCustomer.source)}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">状态</p>
+                  {getStatusBadge(updatedCustomer.status)}
                 </div>
 
                 {updatedCustomer.tags.length > 0 && (
@@ -256,10 +227,6 @@ export default function CustomerDetailPage() {
                 <CardTitle>快捷操作</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Mail className="mr-2 h-4 w-4" />
-                  发送邮件
-                </Button>
                 <Button variant="outline" className="w-full justify-start">
                   <Phone className="mr-2 h-4 w-4" />
                   拨打电话

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Search, Users, UserCheck, UserX, Clock, DollarSign } from 'lucide-react';
+import { Plus, Search, Users, UserCheck, UserX, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +31,6 @@ export default function HomePage() {
   const [filters, setFilters] = useState<Partial<CustomerFilters>>({
     search: '',
     status: 'all',
-    source: 'all',
     sortField: 'createdAt',
     sortOrder: 'desc',
   });
@@ -65,31 +64,18 @@ export default function HomePage() {
 
   const getStatusBadge = (status: Customer['status']) => {
     const styles = {
-      active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      inactive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      need: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      not_need: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     };
     const labels = {
-      active: '活跃',
-      inactive: '不活跃',
-      pending: '待跟进',
+      need: '需要',
+      not_need: '不需要',
     };
     return (
       <Badge className={styles[status]} variant="secondary">
         {labels[status]}
       </Badge>
     );
-  };
-
-  const getSourceLabel = (source: Customer['source']) => {
-    const labels: Record<Customer['source'], string> = {
-      website: '网站',
-      referral: '推荐',
-      social: '社交',
-      direct: '直接',
-      other: '其他',
-    };
-    return labels[source];
   };
 
   return (
@@ -112,7 +98,7 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">总客户数</CardTitle>
@@ -124,29 +110,20 @@ export default function HomePage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">活跃客户</CardTitle>
+              <CardTitle className="text-sm font-medium">需要跟进</CardTitle>
               <UserCheck className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+              <div className="text-2xl font-bold text-green-600">{stats.need}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">待跟进</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
+              <CardTitle className="text-sm font-medium">不需要</CardTitle>
+              <UserX className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">不活跃</CardTitle>
-              <UserX className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.inactive}</div>
+              <div className="text-2xl font-bold text-gray-600">{stats.notNeed}</div>
             </CardContent>
           </Card>
           <Card>
@@ -165,7 +142,7 @@ export default function HomePage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="搜索客户姓名、邮箱或公司..."
+              placeholder="搜索客户姓名或公司..."
               className="pl-10"
               value={filters.search || ''}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
@@ -180,25 +157,8 @@ export default function HomePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="active">活跃</SelectItem>
-              <SelectItem value="pending">待跟进</SelectItem>
-              <SelectItem value="inactive">不活跃</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.source || 'all'}
-            onValueChange={(value) => setFilters({ ...filters, source: value as CustomerFilters['source'] })}
-          >
-            <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="来源" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部来源</SelectItem>
-              <SelectItem value="website">网站</SelectItem>
-              <SelectItem value="referral">推荐</SelectItem>
-              <SelectItem value="social">社交</SelectItem>
-              <SelectItem value="direct">直接</SelectItem>
-              <SelectItem value="other">其他</SelectItem>
+              <SelectItem value="need">需要</SelectItem>
+              <SelectItem value="not_need">不需要</SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -229,11 +189,10 @@ export default function HomePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>客户信息</TableHead>
+                <TableHead>客户姓名</TableHead>
                 <TableHead>联系方式</TableHead>
                 <TableHead>公司</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead>来源</TableHead>
                 <TableHead>消费金额</TableHead>
                 <TableHead>订单数</TableHead>
                 <TableHead>最近联系</TableHead>
@@ -243,7 +202,7 @@ export default function HomePage() {
             <TableBody>
               {customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Users className="mb-2 h-8 w-8" />
                       <p>暂无客户数据</p>
@@ -254,15 +213,13 @@ export default function HomePage() {
                 customers.map((customer) => (
                   <TableRow key={customer.id} className="group">
                     <TableCell>
-                      <Link href={`/customers/${customer.id}`} className="hover:underline">
-                        <div className="font-medium">{customer.name}</div>
-                        <div className="text-xs text-muted-foreground">{customer.email}</div>
+                      <Link href={`/customers/${customer.id}`} className="hover:underline font-medium">
+                        {customer.name}
                       </Link>
                     </TableCell>
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>{customer.company}</TableCell>
                     <TableCell>{getStatusBadge(customer.status)}</TableCell>
-                    <TableCell>{getSourceLabel(customer.source)}</TableCell>
                     <TableCell>{formatCurrency(customer.totalSpent)}</TableCell>
                     <TableCell>{customer.ordersCount}</TableCell>
                     <TableCell>{formatDate(customer.lastContact)}</TableCell>
