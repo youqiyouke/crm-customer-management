@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { getCustomerById, deleteCustomer } from '@/lib/customer-store';
+import { getCurrentAdmin } from '@/lib/admin-store';
 import { formatCurrency, formatDateTime } from '@/data/customers';
 import { Customer } from '@/types/customer';
 import { CustomerDialog } from '@/components/customer-dialog';
@@ -29,6 +30,23 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  const currentAdmin = useMemo(() => getCurrentAdmin(), [mounted]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !currentAdmin) {
+      router.push('/login');
+    }
+  }, [mounted, currentAdmin, router]);
+
+  if (!mounted || !currentAdmin) {
+    return null;
+  }
 
   const customerId = params.id as string;
   const customer = getCustomerById(customerId);

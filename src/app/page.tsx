@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Plus, Search, Users, UserCheck, UserX, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Plus, Search, Users, UserCheck, UserX, Clock, CheckCircle, DollarSign, Settings, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,13 +23,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Customer, CustomerFilters } from '@/types/customer';
 import { getCustomers, getStats, deleteCustomer } from '@/lib/customer-store';
+import { getCurrentAdmin, logoutAdmin } from '@/lib/admin-store';
 import { formatCurrency, formatDate } from '@/data/customers';
 import { CustomerDialog } from '@/components/customer-dialog';
-import Link from 'next/link';
 
 export default function HomePage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<Partial<CustomerFilters>>({
     search: '',
     status: 'all',
@@ -37,9 +48,25 @@ export default function HomePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
+  const currentAdmin = useMemo(() => getCurrentAdmin(), [mounted]);
   const customers = useMemo(() => getCustomers(filters), [filters, refreshKey]);
   const stats = useMemo(() => getStats(), [refreshKey]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !currentAdmin) {
+      router.push('/login');
+    }
+  }, [mounted, currentAdmin, router]);
+
+  if (!mounted || !currentAdmin) {
+    return null;
+  }
 
   const handleAddCustomer = () => {
     setEditingCustomer(null);
@@ -60,6 +87,11 @@ export default function HomePage() {
 
   const handleDialogSuccess = () => {
     setRefreshKey((k) => k + 1);
+  };
+
+  const handleLogout = () => {
+    logoutAdmin();
+    router.push('/login');
   };
 
   const getStatusBadge = (status: Customer['status']) => {
@@ -92,10 +124,42 @@ export default function HomePage() {
               <h1 className="text-2xl font-bold">客户管理平台</h1>
               <p className="text-sm text-muted-foreground">管理您的客户信息和关系</p>
             </div>
-            <Button onClick={handleAddCustomer}>
-              <Plus className="mr-2 h-4 w-4" />
-              添加客户
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button onClick={handleAddCustomer}>
+                <Plus className="mr-2 h-4 w-4" />
+                添加客户
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span>{currentAdmin.name}</span>
+                      <span className="text-xs text-muted-foreground font-normal">
+                        {currentAdmin.role === 'super_admin' ? '超级管理员' : '管理员'}
+                      </span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {currentAdmin.role === 'super_admin' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admins">
+                        <Settings className="mr-2 h-4 w-4" />
+                        管理员管理
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    退出登录
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
