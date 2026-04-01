@@ -96,6 +96,8 @@ export function getStats() {
   const total = customers.length;
   const need = customers.filter((c) => c.status === 'need').length;
   const notNeed = customers.filter((c) => c.status === 'not_need').length;
+  const following = customers.filter((c) => c.status === 'following').length;
+  const completed = customers.filter((c) => c.status === 'completed').length;
   const totalLoanAmount = customers.reduce((sum, c) => sum + c.loanAmount, 0);
   const totalServiceFee = customers.reduce((sum, c) => sum + c.serviceFee, 0);
 
@@ -103,6 +105,8 @@ export function getStats() {
     total,
     need,
     notNeed,
+    following,
+    completed,
     totalLoanAmount,
     totalServiceFee,
   };

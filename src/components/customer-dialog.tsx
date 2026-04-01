@@ -154,6 +154,8 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="need">需要</SelectItem>
+                    <SelectItem value="following">跟进</SelectItem>
+                    <SelectItem value="completed">完结</SelectItem>
                     <SelectItem value="not_need">不需要</SelectItem>
                   </SelectContent>
                 </Select>

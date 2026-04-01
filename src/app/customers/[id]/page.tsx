@@ -50,12 +50,16 @@ export default function CustomerDetailPage() {
 
   const getStatusBadge = (status: Customer['status']) => {
     const styles = {
-      need: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      need: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       not_need: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      following: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     };
     const labels = {
       need: '需要',
       not_need: '不需要',
+      following: '跟进',
+      completed: '完结',
     };
     return (
       <Badge className={styles[status]} variant="secondary">

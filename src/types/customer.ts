@@ -3,7 +3,7 @@ export interface Customer {
   name: string;
   phone: string;
   company: string;
-  status: 'need' | 'not_need';
+  status: 'need' | 'not_need' | 'following' | 'completed';
   tags: string[];
   notes: string;
   createdAt: string;
@@ -17,7 +17,7 @@ export interface CustomerFormData {
   name: string;
   phone: string;
   company: string;
-  status: 'need' | 'not_need';
+  status: 'need' | 'not_need' | 'following' | 'completed';
   tags: string[];
   notes: string;
 }

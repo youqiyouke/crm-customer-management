@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Search, Users, UserCheck, UserX, DollarSign } from 'lucide-react';
+import { Plus, Search, Users, UserCheck, UserX, Clock, CheckCircle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,12 +64,16 @@ export default function HomePage() {
 
   const getStatusBadge = (status: Customer['status']) => {
     const styles = {
-      need: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      need: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       not_need: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      following: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     };
     const labels = {
       need: '需要',
       not_need: '不需要',
+      following: '跟进',
+      completed: '完结',
     };
     return (
       <Badge className={styles[status]} variant="secondary">
@@ -98,7 +102,7 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">总客户数</CardTitle>
@@ -110,11 +114,29 @@ export default function HomePage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">需要跟进</CardTitle>
-              <UserCheck className="h-4 w-4 text-green-500" />
+              <CardTitle className="text-sm font-medium">需要</CardTitle>
+              <UserCheck className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.need}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.need}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">跟进</CardTitle>
+              <Clock className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{stats.following}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">完结</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
             </CardContent>
           </Card>
           <Card>
@@ -132,7 +154,7 @@ export default function HomePage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalLoanAmount)}</div>
+              <div className="text-xl font-bold">{formatCurrency(stats.totalLoanAmount)}</div>
             </CardContent>
           </Card>
           <Card>
@@ -141,7 +163,7 @@ export default function HomePage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalServiceFee)}</div>
+              <div className="text-xl font-bold">{formatCurrency(stats.totalServiceFee)}</div>
             </CardContent>
           </Card>
         </div>
@@ -167,6 +189,8 @@ export default function HomePage() {
             <SelectContent>
               <SelectItem value="all">全部状态</SelectItem>
               <SelectItem value="need">需要</SelectItem>
+              <SelectItem value="following">跟进</SelectItem>
+              <SelectItem value="completed">完结</SelectItem>
               <SelectItem value="not_need">不需要</SelectItem>
             </SelectContent>
           </Select>
