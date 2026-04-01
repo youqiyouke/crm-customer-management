@@ -4,25 +4,19 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: '新应用 | 扣子编程',
-    template: '%s | 扣子编程',
+    default: '客户管理平台',
+    template: '%s | 客户管理平台',
   },
-  description:
-    '扣子编程是一款一站式云端 Vibe Coding 开发平台。通过对话轻松构建智能体、工作流和网站，实现从创意到上线的无缝衔接。',
+  description: '高效的客户关系管理系统，帮助您轻松管理客户信息、跟进客户状态、提升业务效率',
   keywords: [
-    '扣子编程',
-    'Coze Code',
-    'Vibe Coding',
-    'AI 编程',
-    '智能体搭建',
-    '工作流搭建',
-    '网站搭建',
-    '网站部署',
-    '全栈开发',
-    'AI 工程师',
+    '客户管理',
+    'CRM',
+    '客户关系管理',
+    '客户追踪',
+    '销售管理',
   ],
-  authors: [{ name: 'Coze Code Team', url: 'https://code.coze.cn' }],
-  generator: 'Coze Code',
+  authors: [{ name: 'CRM Team' }],
+  generator: 'Next.js',
   // icons: {
   //   icon: '',
   // },
