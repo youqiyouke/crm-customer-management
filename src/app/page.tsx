@@ -51,8 +51,8 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
 
   const currentAdmin = useMemo(() => getCurrentAdmin(), [mounted]);
-  const customers = useMemo(() => getCustomers(filters), [filters, refreshKey]);
-  const stats = useMemo(() => getStats(), [refreshKey]);
+  const customers = useMemo(() => getCustomers(filters, currentAdmin), [filters, refreshKey, currentAdmin]);
+  const stats = useMemo(() => getStats(currentAdmin), [refreshKey, currentAdmin]);
 
   useEffect(() => {
     setMounted(true);
@@ -80,7 +80,7 @@ export default function HomePage() {
 
   const handleDeleteCustomer = (id: string) => {
     if (confirm('确定要删除这个客户吗？')) {
-      deleteCustomer(id);
+      deleteCustomer(id, currentAdmin);
       setRefreshKey((k) => k + 1);
     }
   };
@@ -361,6 +361,7 @@ export default function HomePage() {
         onOpenChange={setDialogOpen}
         customer={editingCustomer}
         onSuccess={handleDialogSuccess}
+        currentAdmin={currentAdmin}
       />
     </div>
   );

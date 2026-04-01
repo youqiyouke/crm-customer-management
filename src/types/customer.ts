@@ -11,6 +11,7 @@ export interface Customer {
   visitTime: string; // 访问时间，自动更新
   loanAmount: number; // 放款金额
   serviceFee: number; // 服务费
+  createdBy: string; // 创建者管理员ID
 }
 
 export interface CustomerFormData {

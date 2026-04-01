@@ -49,7 +49,7 @@ export default function CustomerDetailPage() {
   }
 
   const customerId = params.id as string;
-  const customer = getCustomerById(customerId);
+  const customer = getCustomerById(customerId, currentAdmin);
 
   if (!customer) {
     notFound();
@@ -57,7 +57,7 @@ export default function CustomerDetailPage() {
 
   const handleDelete = () => {
     if (confirm('确定要删除这个客户吗？此操作不可撤销。')) {
-      deleteCustomer(customerId);
+      deleteCustomer(customerId, currentAdmin);
       router.push('/');
     }
   };
@@ -86,7 +86,7 @@ export default function CustomerDetailPage() {
     );
   };
 
-  const updatedCustomer = getCustomerById(customerId) || customer;
+  const updatedCustomer = getCustomerById(customerId, currentAdmin) || customer;
 
   return (
     <div className="min-h-screen bg-background">
@@ -268,6 +268,7 @@ export default function CustomerDetailPage() {
         onOpenChange={setDialogOpen}
         customer={updatedCustomer}
         onSuccess={handleEditSuccess}
+        currentAdmin={currentAdmin}
       />
     </div>
   );

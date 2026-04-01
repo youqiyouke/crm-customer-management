@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Customer, CustomerFormData } from '@/types/customer';
+import { Admin } from '@/types/admin';
 import { createCustomer, updateCustomer } from '@/lib/customer-store';
 import {
   Dialog,
@@ -28,9 +29,10 @@ interface CustomerDialogProps {
   onOpenChange: (open: boolean) => void;
   customer?: Customer | null;
   onSuccess: () => void;
+  currentAdmin: Admin | null;
 }
 
-export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: CustomerDialogProps) {
+export function CustomerDialog({ open, onOpenChange, customer, onSuccess, currentAdmin }: CustomerDialogProps) {
   const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
     phone: '',
@@ -67,13 +69,14 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentAdmin) return;
     setLoading(true);
 
     try {
       if (customer) {
-        updateCustomer(customer.id, formData);
+        updateCustomer(customer.id, formData, currentAdmin);
       } else {
-        createCustomer(formData);
+        createCustomer(formData, currentAdmin.id);
       }
       onSuccess();
       onOpenChange(false);

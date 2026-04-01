@@ -14,6 +14,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-20T14:30:00Z',
     loanAmount: 125000,
     serviceFee: 1250,
+    createdBy: '1', // admin
   },
   {
     id: '2',
@@ -28,6 +29,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-18T11:20:00Z',
     loanAmount: 45000,
     serviceFee: 450,
+    createdBy: '2', // manager
   },
   {
     id: '3',
@@ -42,6 +44,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-15T16:45:00Z',
     loanAmount: 0,
     serviceFee: 0,
+    createdBy: '1', // admin
   },
   {
     id: '4',
@@ -56,6 +59,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-19T09:15:00Z',
     loanAmount: 280000,
     serviceFee: 2800,
+    createdBy: '2', // manager
   },
   {
     id: '5',
@@ -70,6 +74,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-01-20T11:00:00Z',
     loanAmount: 68000,
     serviceFee: 680,
+    createdBy: '1', // admin
   },
   {
     id: '6',
@@ -84,6 +89,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-21T10:00:00Z',
     loanAmount: 450000,
     serviceFee: 4500,
+    createdBy: '1', // admin
   },
   {
     id: '7',
@@ -98,6 +104,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-17T15:20:00Z',
     loanAmount: 95000,
     serviceFee: 950,
+    createdBy: '2', // manager
   },
   {
     id: '8',
@@ -112,6 +119,7 @@ export const mockCustomers: Customer[] = [
     visitTime: '2024-03-19T14:00:00Z',
     loanAmount: 0,
     serviceFee: 0,
+    createdBy: '2', // manager
   },
 ];
 
