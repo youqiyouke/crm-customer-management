@@ -1,13 +1,12 @@
 {
-  "name": "projects",
+  "name": "crm-customer-management",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "bash ./scripts/build.sh",
-    "dev": "bash ./scripts/dev.sh",
-    "preinstall": "npx only-allow pnpm",
+    "build": "next build",
+    "dev": "next dev --turbopack --port 5000",
     "lint": "eslint",
-    "start": "bash ./scripts/start.sh",
+    "start": "next start -p 5000",
     "ts-check": "tsc -p tsconfig.json"
   },
   "dependencies": {
@@ -85,9 +84,5 @@
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.9.3"
-  },
-  "packageManager": "pnpm@9.0.0",
-  "engines": {
-    "pnpm": ">=9.0.0"
   }
 }
